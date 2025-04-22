@@ -1,25 +1,7 @@
 import 'package:flutter/material.dart';
-import 'screens/chat_screen.dart';
-
-void main() {
-  runApp(const MyApp());
-}
-
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return MaterialApp(
-      title: '채팅 앱',
-      theme: ThemeData(
-        primarySwatch: Colors.teal,
-        scaffoldBackgroundColor: Colors.grey[100],
-      ),
-      home: const ChatScreen(),
-    );
-  }
-}
+import 'package:http/http.dart' as http;
+import 'dart:convert';
+import '../widgets/chat_message.dart';
 
 class ChatScreen extends StatefulWidget {
   const ChatScreen({super.key});
@@ -33,17 +15,12 @@ class _ChatScreenState extends State<ChatScreen> {
   final List<ChatMessage> _messages = [];
   final ScrollController _scrollController = ScrollController();
   final FocusNode _focusNode = FocusNode();
+  final String _baseUrl = 'http://localhost:8000';
 
   @override
   void initState() {
     super.initState();
-    // 초기 메시지 추가
-    _messages.add(
-      ChatMessage(
-        text: '안녕하세요! 무엇을 도와드릴까요?',
-        isMe: false,
-      ),
-    );
+    _loadMessages();
   }
 
   @override
@@ -52,47 +29,72 @@ class _ChatScreenState extends State<ChatScreen> {
     super.dispose();
   }
 
-  void _handleSubmitted(String text) {
+  Future<void> _loadMessages() async {
+    try {
+      final response = await http.get(Uri.parse('$_baseUrl/messages'));
+      if (response.statusCode == 200) {
+        final List<dynamic> messagesJson = json.decode(response.body);
+        setState(() {
+          _messages.clear();
+          for (var message in messagesJson) {
+            _messages.add(
+              ChatMessage(
+                text: message['text'],
+                isMe: message['is_me'],
+              ),
+            );
+          }
+        });
+      }
+    } catch (e) {
+      print('메시지 로드 중 오류 발생: $e');
+    }
+  }
+
+  Future<void> _handleSubmitted(String text) async {
     if (text.trim().isEmpty) return;
 
     _messageController.clear();
-    setState(() {
-      _messages.add(
-        ChatMessage(
-          text: text,
-          isMe: true,
-        ),
-      );
-    });
 
-    // 자동 스크롤
-    Future.delayed(const Duration(milliseconds: 100), () {
-      _scrollController.animateTo(
-        _scrollController.position.maxScrollExtent,
-        duration: const Duration(milliseconds: 300),
-        curve: Curves.easeOut,
+    try {
+      final response = await http.post(
+        Uri.parse('$_baseUrl/messages'),
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode({
+          'text': text,
+          'is_me': true,
+        }),
       );
-    });
 
-    // 1초 후 응답 메시지 추가
-    Future.delayed(const Duration(seconds: 1), () {
-      setState(() {
-        _messages.add(
-          ChatMessage(
-            text: '메시지를 받았습니다!',
-            isMe: false,
-          ),
-        );
-      });
-      // 자동 스크롤
-      Future.delayed(const Duration(milliseconds: 100), () {
-        _scrollController.animateTo(
-          _scrollController.position.maxScrollExtent,
-          duration: const Duration(milliseconds: 300),
-          curve: Curves.easeOut,
-        );
-      });
-    });
+      if (response.statusCode == 200) {
+        final responseData = json.decode(response.body);
+        setState(() {
+          _messages.add(
+            ChatMessage(
+              text: text,
+              isMe: true,
+            ),
+          );
+          _messages.add(
+            ChatMessage(
+              text: responseData['text'],
+              isMe: responseData['is_me'],
+            ),
+          );
+        });
+
+        // 자동 스크롤
+        Future.delayed(const Duration(milliseconds: 100), () {
+          _scrollController.animateTo(
+            _scrollController.position.maxScrollExtent,
+            duration: const Duration(milliseconds: 300),
+            curve: Curves.easeOut,
+          );
+        });
+      }
+    } catch (e) {
+      print('메시지 전송 중 오류 발생: $e');
+    }
 
     // 입력창에 포커스 유지
     _focusNode.requestFocus();
@@ -157,45 +159,6 @@ class _ChatScreenState extends State<ChatScreen> {
                     onPressed: () => _handleSubmitted(_messageController.text),
                   ),
                 ],
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class ChatMessage extends StatelessWidget {
-  final String text;
-  final bool isMe;
-
-  const ChatMessage({
-    super.key,
-    required this.text,
-    required this.isMe,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.symmetric(vertical: 4.0),
-      child: Row(
-        mainAxisAlignment: isMe ? MainAxisAlignment.end : MainAxisAlignment.start,
-        children: [
-          Container(
-            constraints: BoxConstraints(
-              maxWidth: MediaQuery.of(context).size.width * 0.7,
-            ),
-            padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 10.0),
-            decoration: BoxDecoration(
-              color: isMe ? Colors.teal[100] : Colors.grey[300],
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: Text(
-              text,
-              style: TextStyle(
-                color: isMe ? Colors.black87 : Colors.black87,
               ),
             ),
           ),
