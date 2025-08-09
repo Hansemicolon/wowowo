@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<network-security-config>
+    <!-- HTTP 허용할 도메인 지정 -->
+    <domain-config cleartextTrafficPermitted="true">
+        <domain includeSubdomains="true">36e2455ca447.ngrok-free.app</domain>
+    </domain-config>
+
+    <!-- 모든 HTTP 허용 (개발용, 권장 X) -->
+    <!--
+    <base-config cleartextTrafficPermitted="true" />
+    -->
+</network-security-config>

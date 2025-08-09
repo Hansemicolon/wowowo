@@ -28,4 +28,4 @@ class TranslationModel {
       'targetLanguage': targetLanguage,
     };
   }
-} 
+}
