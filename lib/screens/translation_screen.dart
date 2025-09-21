@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:google_mobile_ads/google_mobile_ads.dart';
 import '../services/translation_service.dart';
 import '../models/translation_model.dart';
@@ -28,7 +29,6 @@ class _TranslationScreenState extends State<TranslationScreen> {
     super.initState();
     _loadBannerAd();
   }
-
   void _loadBannerAd() {
     _bannerAd = BannerAd(
       adUnitId: 'ca-app-pub-3940256099942544/6300978111', // 테스트 광고 ID
@@ -64,7 +64,7 @@ class _TranslationScreenState extends State<TranslationScreen> {
       // );
 
       setState(() {
-        _translationResult = "Test result";
+        _translationResult = "가끔은 너의 말만 맞는 것처럼 되고, 내 말은 다 틀린 것처럼 들려서 조금 속상해. 내 얘기도 존중받고 싶어";
         _isLoading = false;
       });
     } catch (e) {
@@ -77,13 +77,25 @@ class _TranslationScreenState extends State<TranslationScreen> {
     }
   }
 
+  void _copyToClipboard() {
+    if (_translationResult != null) {
+      Clipboard.setData(ClipboardData(text: _translationResult!));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('번역 결과가 클립보드에 복사되었습니다'),
+          backgroundColor: Colors.green,
+        ),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     const double edgeinsetsAll = 20.0;
     const double textFontSize = 16.0;
     return Scaffold(
       appBar: AppBar(
-        title: const Text('wowowo'),
+        title: const Text('N:D'),
         leading: Builder(
           builder: (context) => IconButton(
             icon: const Icon(Icons.menu),
@@ -187,63 +199,114 @@ class _TranslationScreenState extends State<TranslationScreen> {
                 padding: const EdgeInsets.all(edgeinsetsAll),
                 child: Column(
                   children: [
+                    // 입력 영역
                     Expanded(
                       flex: 1,
-                      child:
-                      TextField(
-                        controller: _sourceController,
-                        maxLines: null,
-                        expands: true,
-                        textAlignVertical: TextAlignVertical.top,
-                        decoration: const InputDecoration(
-                          hintText: '번역할 텍스트를 입력하세요',
-                          contentPadding: EdgeInsets.all(edgeinsetsAll),
-                          focusedBorder: InputBorder.none,       // 포커스 상태(파란색 선) 없애기
+                      child: Container(
+                        decoration: BoxDecoration(
+                          border: Border.all(color: Colors.grey.shade300),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: TextField(
+                          controller: _sourceController,
+                          maxLines: null,
+                          expands: true,
+                          textAlignVertical: TextAlignVertical.top,
+                          decoration: const InputDecoration(
+                            hintText: '번역할 텍스트를 입력하세요',
+                            contentPadding: EdgeInsets.all(edgeinsetsAll),
+                            border: InputBorder.none,
+                            focusedBorder: InputBorder.none,
+                          ),
                         ),
                       ),
                     ),
-                    const SizedBox(height: 30),
+                    const SizedBox(height: 20),
+                    // 번역 버튼
                     ElevatedButton(
                       onPressed: _isLoading ? null : _translateText,
                       style: ElevatedButton.styleFrom(
                         minimumSize: const Size(double.infinity, 50),
-                      ),
-                      child: _isLoading
-                          ? const CircularProgressIndicator()
-                          : const Text(
-                        '번역하기',
-                        style: TextStyle(color: Colors.black26),),
-                    ),
-                    const SizedBox(height: 16),
-                    if (_translationResult != null)
-                      Expanded(
-                        flex: 2,
-                        child: Container(
-                          width: double.infinity,
-                          padding: const EdgeInsets.all(edgeinsetsAll),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const Text(
-                                '여기 복붙 버튼 있으면 좋겠네 그리고 뭘 넣지',
-                                style: TextStyle(
-                                  fontSize: textFontSize,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                              const SizedBox(height: 16),
-                              Expanded(
-                                child: SingleChildScrollView(
-                                  child: Text(
-                                    _translationResult!,
-                                    style: const TextStyle(fontSize: textFontSize),
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
+                        backgroundColor: Colors.blue,
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
                         ),
                       ),
+                      child: _isLoading
+                          ? const CircularProgressIndicator(color: Colors.white)
+                          : const Text(
+                        '번역하기',
+                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    // 결과 영역
+                    Expanded(
+                      flex: 1,
+                      child: Container(
+                        width: double.infinity,
+                        decoration: BoxDecoration(
+                          border: Border.all(color: Colors.grey.shade300),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Container(
+                              width: double.infinity,
+                              padding: const EdgeInsets.all(16),
+                              decoration: BoxDecoration(
+                                color: Colors.grey.shade50,
+                                borderRadius: const BorderRadius.only(
+                                  topLeft: Radius.circular(12),
+                                  topRight: Radius.circular(12),
+                                ),
+                              ),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  const Text(
+                                    '번역 결과',
+                                    style: TextStyle(
+                                      fontSize: textFontSize,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                  if (_translationResult != null)
+                                    IconButton(
+                                      onPressed: _copyToClipboard,
+                                      icon: const Icon(Icons.copy),
+                                      tooltip: '복사',
+                                    ),
+                                ],
+                              ),
+                            ),
+                            Expanded(
+                              child: Padding(
+                                padding: const EdgeInsets.all(edgeinsetsAll),
+                                child: _translationResult != null
+                                    ? SingleChildScrollView(
+                                        child: Text(
+                                          _translationResult!,
+                                          style: const TextStyle(fontSize: textFontSize),
+                                        ),
+                                      )
+                                    : const Center(
+                                        child: Text(
+                                          '번역 결과가 여기에 표시됩니다',
+                                          style: TextStyle(
+                                            color: Colors.grey,
+                                            fontSize: textFontSize,
+                                          ),
+                                        ),
+                                      ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
                   ],
                 ),
               ),
